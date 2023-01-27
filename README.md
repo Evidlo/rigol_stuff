@@ -20,7 +20,7 @@ Get the vendor/product/serial numbers from the output of `lsusb -v`
 ``` python
 from rigol_stuff.rigol import RigolDM305, RigolDP821
 # multimeter
->>> dm = RigolDM3058(vendor="0x1ab1", product="0x09c4", serial="DM3L22XXXXXXX", debug=True)
+>>> dm = RigolDM3058("DM3L22XXXXXXX")
 >>> dm.reset()
 >>> dm.meas_voltage()
 0.0001432987
@@ -29,7 +29,7 @@ from rigol_stuff.rigol import RigolDM305, RigolDP821
 >>> dm.close()
 
 # power supply
->>> dcps = RigolDP821(vendor="0x1ab1", product="0x0e11", serial="DP8G19XXXXXXX")
+>>> dcps = RigolDP821("DP8G19XXXXXXX")
 >>> dcps.reset()
 >>> dcps.set_voltage(voltage=v, max_current=0.5)
 >>> dcps.turn_on()
