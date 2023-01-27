@@ -3,7 +3,6 @@
 # Install
 
     sudo echo 'SUBSYSTEMS=="usb", ATTRS{idVendor}=="1ab1", GROUP="dialout", MODE="0666"' > /etc/udev/rules.d/30-rigol.rules
-
     pip install https://github.com/evidlo/rigol_stuff/archive/master.zip
     
 # Examples
