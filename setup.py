@@ -25,7 +25,8 @@ setup(
     # your project's pip dependencies
     install_requires=[
         "pyvisa",
-        "pyvisa-py"
+        "pyvisa-py",
+        "pyusb"
     ],
     include_package_data=True,
     # automatically look for subfolders with __init__.py
