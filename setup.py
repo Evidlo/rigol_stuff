@@ -24,7 +24,8 @@ setup(
     url="https://github.com/evidlo/rigol_stuff",
     # your project's pip dependencies
     install_requires=[
-        "pyvisa"
+        "pyvisa",
+        "pyvisa-py"
     ],
     include_package_data=True,
     # automatically look for subfolders with __init__.py
