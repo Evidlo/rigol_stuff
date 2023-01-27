@@ -1,88 +1,133 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Dec 21 13:57:32 2013
-
-@author: bjuluri
-Uses Pyvisa for communication
+Reading USBTMC device in pure Python file IO
+Evan Widloski - 2023-01-27
 """
 
-from usbtmc import usbtmc
+import os
 import time
+from pathlib import Path
 
-delay = 0.5
+devpath = Path('/dev')
 
 class Rigol():
     def __init__(self, serial, delay=0.1, debug=False):
         self.debug = debug
         if self.debug:
             print('device_str:', device_str)
-        self.instrument = usbtmc.Instrument(self.find_usbtmc(serial))
+        self.device_file = self.find_device(serial)
         self.delay=delay
 
-    def find_usbtmc(self, iSerial):
-        """Find usbtmc device by serial"""
-        for dev in usbtmc.list_devices():
-            if dev.serial_number == iSerial:
-                return dev
+    def find_device(self, serial):
+        """Find usbtmc device by serial
+
+        Args:
+            serial (str): device iSerial string as shown in `lsusb -v`
+
+        Returns:
+            file_descriptor (int): Linux file descriptor to /dev/usbtmcX
+        """
+        for dev in devpath.glob('usbtmc*'):
+            f = os.open(dev, os.O_RDWR)
+            os.write(f, b'*IDN?\r\n')
+            device_str = os.read(f, 1024).decode('ascii')
+            if serial in device_str:
+                return f
+            else:
+                os.close(f)
         else:
-            raise Exception(f'Device with serial {iSerial} not found')
+            raise Exception(f'Device with serial {serial} not found')
 
     def write(self, message):
+        """Write a message to usbtmc device and check for error
+
+        Args:
+            message (str): usbtmc message to send to device
+        """
         if self.debug:
             print(message)
-        self.instrument.write(message)
+        os.write(self.device_file, message.encode('ascii'))
+        # os.read(self.device_file, 1024)
+        # self.instrument.write(message)
         time.sleep(self.delay)
-        error = self.instrument.ask('SYST:ERR?')
-        if error[0]:
+        # error = self.instrument.ask('SYST:ERR?')
+        os.write(self.device_file, b'SYST:ERR?\r\n')
+        code, msg = os.read(self.device_file, 1024).strip().split(b',')
+        if code == b'0':
             pass
-        else :
-            print(message+' received. An Error occured: '+ str(error))
+        else:
+            print(f"Errno {code.decode('ascii')}: {msg.decode('ascii')}")
 
     def query(self, message):
+        """Query usbtmc device for data
+
+        Args:
+            message (str): usbtmc query message
+
+        Returns:
+            result (str): response
+        """
         if self.debug:
             print(message)
-        result = self.instrument.ask(message)
+        os.write(self.device_file, message.encode('ascii'))
         time.sleep(self.delay)
+        result = os.read(self.device_file, 1024).decode('ascii')
+        # result = self.device.ask(message)
         return result
 
     def reset(self):
         """resets the instrument, registers,buffers"""
         self.write("*RST")
-        time.sleep(self.delay)
 
     def close(self):
-        self.instrument.close()
+        """Close the usbtmc file descriptor"""
+        self.device_file.close()
 
 
 class RigolDM3058(Rigol):
     def meas_voltage(self):
+        """Measure multimeter voltage"""
         return float(self.query(f':MEAS:VOLT:DC?'))
 
     def meas_current(self):
+        """Measure multimeter current"""
         return float(self.query(f':MEAS:CURR:DC?'))
 
     def reset(self):
+        """Reset multimeter"""
         try:
-            Rigol.reset()
+            Rigol.reset(self)
         except Exception as e:
-            if 'Operation timed out' in e.args[0]:
+            if 'Connection timed out' in e.args[0]:
                 pass
             else:
                 raise e
 
 class RigolDP821(Rigol):
     def turn_off(self, chan=1):
+        """Turn off output channel
+
+        Args:
+            chan (int): channel number
+        """
         self.write(f':OUTP CH{chan},OFF')
 
     def turn_on(self, chan=1):
+        """Turn on output channel
+
+        Args:
+            chan (int): channel number
+        """
         self.write(f':OUTP CH{chan},ON')
 
-    def sel_output(self, chan=1):
-        cmd1 = ':INST:NSEL %s' %chan
-        self.write(cmd1)
-        time.sleep(self.delay)
-
     def set_voltage(self, voltage, max_current=None, chan=1):
+        """Set channel in constant voltage mode
+
+        Args:
+            voltage (float): channel voltage
+            max_current (float or None): current limit
+            chan (int): channel number
+        """
         self.write(f':INST:NSEL {chan}')
         self.write(f':VOLT {voltage}')
         if max_current is not None:
@@ -92,6 +137,13 @@ class RigolDP821(Rigol):
             self.toggle_ocp('OFF')
 
     def set_current(self, current, max_voltage=None, chan=1):
+        """Set channel in constant current mode
+
+        Args:
+            current (float): channel voltage
+            max_voltage (float or None): voltage limit
+            chan (int): channel number
+        """
         self.write(f':INST:NSEL {chan}')
         self.write(f':CURR {current}')
         if max_voltage is not None:
@@ -101,44 +153,76 @@ class RigolDP821(Rigol):
             self.toggle_ovp('OFF')
 
     def set_ovp(self, max_voltage, chan=1):
+        """Set voltage limit on channel
+
+        Args:
+            max_voltage (float or None): voltage limit
+            chan (int): channel number
+        """
         self.write(f':INST:NSEL {chan}')
         self.write(f':VOLT:PROT {max_voltage}')
 
-    def toggle_ovp(self, state):
-        self.write(f':VOLT:PROT:STAT {state}')
-
     def set_ocp(self, max_current, chan=1):
+        """Set channel in constant voltage mode
+
+        Args:
+            max_current (float or None): current limit
+            chan (int): channel number
+        """
         self.write(f':INST:NSEL {chan}')
         self.write(f':CURR:PROT {max_current}')
 
-    def toggle_ocp(self, state):
+    def toggle_ovp(self, state, chan=1):
+        """Enable/disable voltage limit
+
+        Args:
+            state (bool): voltage limit enabled
+            chan (int): channel number
+        """
+        state = 'ON' if state else 'OFF'
+        self.write(f':INST:NSEL {chan}')
+        self.write(f':VOLT:PROT:STAT {state}')
+
+    def toggle_ocp(self, state, chan=1):
+        """Enable/disable current limit
+
+        Args:
+            state (bool): current limit enabled
+            chan (int): channel number
+        """
+        state = 'ON' if state else 'OFF'
+        self.write(f':INST:NSEL {chan}')
         self.write(f':CURR:PROT:STAT {state}')
 
     def meas_voltage(self, chan=1):
+        """Measure channel voltage
+
+        Args:
+            chan (int): channel number
+
+        Returns:
+            voltage (float): channel voltage
+        """
         return float(self.query(f':MEAS:VOLT? CH{chan}'))
 
     def meas_current(self, chan=1):
+        """Measure channel current
+
+        Args:
+            chan (int): channel number
+
+        Returns:
+            current (float): channel current
+        """
         return float(self.query(f':MEAS:CURR? CH{chan}'))
 
     def meas_power(self, chan=1):
+        """Measure channel power
+
+        Args:
+            chan (int): channel number
+
+        Returns:
+            power (float): channel power
+        """
         return float(self.query(f':MEAS:POWE? CH{chan}'))
-
-
-if __name__ == "__main__":
-    # get these from 'lsbusb -v'
-
-    # power supply
-    # dcps = RigolDP821(vendor="0x1ab1", product="0x0e11", serial="DP8G194400109")
-    # r.reset()
-    # r.set_voltage(voltage=v, max_current=0.5)
-    # r.turn_on()
-    # time.sleep(1)
-    # r.turn_off()
-    # r.close()
-
-    # multimeter
-    dm = RigolDM3058(vendor="0x1ab1", product="0x09c4", serial="DM3L223900431", debug=True)
-    # dm.reset()
-    # print(dm.meas_voltage())
-    # print(dm.meas_current())
-    # dm.close()
