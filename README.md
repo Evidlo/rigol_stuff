@@ -9,7 +9,7 @@
 
 Get the vendor/product/serial numbers from the output of `lsusb -v`
 
-   lsusb -v | grep Rigol -A 50 | grep 'iProduct\|idProduct\|idVendor\|iSerial'
+    lsusb -v | grep Rigol -A 50 | grep 'iProduct\|idProduct\|idVendor\|iSerial'
 
 ``` python
 from rigol_stuff.rigol import RigolDM305, RigolDP821
