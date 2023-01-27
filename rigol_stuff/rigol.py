@@ -6,27 +6,33 @@ Created on Sat Dec 21 13:57:32 2013
 Uses Pyvisa for communication
 """
 
-import pyvisa
+from usbtmc import usbtmc
 import time
 
 delay = 0.5
 
 class Rigol():
-    def __init__(self, *, vendor, product, serial, delay=0.1, debug=False):
-        self.rm = pyvisa.ResourceManager('@py')
+    def __init__(self, serial, delay=0.1, debug=False):
         self.debug = debug
-        device_str = f"USB::{vendor}::{product}::{serial}::INSTR"
         if self.debug:
             print('device_str:', device_str)
-        self.instrument = self.rm.open_resource(device_str)
+        self.instrument = usbtmc.Instrument(self.find_usbtmc(serial))
         self.delay=delay
+
+    def find_usbtmc(self, iSerial):
+        """Find usbtmc device by serial"""
+        for dev in usbtmc.list_devices():
+            if dev.serial_number == iSerial:
+                return dev
+        else:
+            raise Exception(f'Device with serial {iSerial} not found')
 
     def write(self, message):
         if self.debug:
             print(message)
         self.instrument.write(message)
         time.sleep(self.delay)
-        error = self.instrument.query('SYST:ERR?')
+        error = self.instrument.ask('SYST:ERR?')
         if error[0]:
             pass
         else :
@@ -35,7 +41,7 @@ class Rigol():
     def query(self, message):
         if self.debug:
             print(message)
-        result = self.instrument.query(message)
+        result = self.instrument.ask(message)
         time.sleep(self.delay)
         return result
 
@@ -73,7 +79,7 @@ class RigolDP821(Rigol):
 
     def sel_output(self, chan=1):
         cmd1 = ':INST:NSEL %s' %chan
-        self.instrument.write(cmd1)
+        self.write(cmd1)
         time.sleep(self.delay)
 
     def set_voltage(self, voltage, max_current=None, chan=1):
@@ -108,13 +114,13 @@ class RigolDP821(Rigol):
     def toggle_ocp(self, state):
         self.write(f':CURR:PROT:STAT {state}')
 
-    def meas_voltage(self, chan):
+    def meas_voltage(self, chan=1):
         return float(self.query(f':MEAS:VOLT? CH{chan}'))
 
-    def meas_current(self, chan):
+    def meas_current(self, chan=1):
         return float(self.query(f':MEAS:CURR? CH{chan}'))
 
-    def meas_power(self, chan):
+    def meas_power(self, chan=1):
         return float(self.query(f':MEAS:POWE? CH{chan}'))
 
 

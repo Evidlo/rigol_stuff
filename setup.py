@@ -24,8 +24,7 @@ setup(
     url="https://github.com/evidlo/rigol_stuff",
     # your project's pip dependencies
     install_requires=[
-        "pyvisa",
-        "pyvisa-py",
+        "python-usbtmc",
         "pyusb"
     ],
     include_package_data=True,
