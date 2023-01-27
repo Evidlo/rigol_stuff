@@ -11,13 +11,9 @@ Get the vendor/product/serial numbers from the output of `lsusb -v`
 
     lsusb -v | grep Rigol -A 50 | grep 'iProduct\|idProduct\|idVendor\|iSerial'
 
-``` python
-from rigol_stuff.rigol import RigolDM305, RigolDP821
->>> r = RigolDM3058(vendor="0x1ab1", product="0x09c4", serial="DM3L223900431")
->>> r.meas_current()
-```
 
 ``` python
+from rigol_stuff.rigol import RigolDM305, RigolDP821
 # power supply
 >>> dcps = RigolDP821(vendor="0x1ab1", product="0x0e11", serial="DP8G194400109")
 >>> dcps.reset()
