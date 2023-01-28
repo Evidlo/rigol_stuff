@@ -81,7 +81,7 @@ class Rigol():
 
     def close(self):
         """Close the usbtmc file descriptor"""
-        os.close(device_file)
+        os.close(self.device_file)
 
 
 class RigolDM3058(Rigol):
