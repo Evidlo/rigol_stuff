@@ -2,16 +2,17 @@
 
 # Install
 
-    sudo echo 'SUBSYSTEMS=="usb", ATTRS{idVendor}=="1ab1", GROUP="dialout", MODE="0666"' > /etc/udev/rules.d/30-rigol.rules
     pip install https://github.com/evidlo/rigol_stuff/archive/master.zip
     
+
+<!-- sudo echo 'SUBSYSTEMS=="usb", ATTRS{idVendor}=="1ab1", GROUP="dialout", MODE="0666"' > /etc/udev/rules.d/30-rigol.rules -->
+
+
 # Examples
 
-Get the vendor/product/serial numbers from the output of `lsusb -v`
+Get the serial numbers from the output of `lsusb -v`
 
-    $ lsusb -v | grep Rigol -A 50 | grep 'iProduct\|idProduct\|idVendor\|iSerial'
-    idVendor           0x1ab1 Rigol Technologies
-    idProduct          0x09c4 
+    $ lsusb -v | grep Rigol -A 50 | grep '\|iSerial'
     iProduct                2 DM3000 SERIES 
     iSerial                 3 DM3L22XXXXXXX
 
