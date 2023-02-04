@@ -87,11 +87,11 @@ class Rigol():
 class RigolDM3058(Rigol):
     def meas_voltage(self, mode='DC'):
         """Measure multimeter voltage"""
-        return float(self.query(f':MEAS:VOLT:{MODE}?'))
+        return float(self.query(f':MEAS:VOLT:{mode}?'))
 
     def meas_current(self, mode='DC'):
         """Measure multimeter current"""
-        return float(self.query(f':MEAS:CURR:{MODE}?'))
+        return float(self.query(f':MEAS:CURR:{mode}?'))
 
     def reset(self):
         """Reset multimeter"""
